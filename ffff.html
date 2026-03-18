@@ -1,0 +1,136 @@
+<script>
+
+/* CONFIG (IMPORTANTE: USE SUA ANON KEY JWT) */
+const SUPABASE = window.supabase.createClient(
+  "https://fcehmjmtxqmrjkuqlkay.supabase.co",
+  "COLE_AQUI_SUA_ANON_KEY_CORRETA"
+);
+
+/* ELEMENTOS */
+const buscaInput = document.getElementById('busca');
+const planoInput = document.getElementById('plano');
+const statusInput = document.getElementById('status');
+const grid = document.getElementById('grid');
+const modal = document.getElementById('modal');
+
+/* ESTADO */
+let empresas = [];
+let atual = null;
+
+/* LOAD */
+async function load(){
+  const { data } = await SUPABASE.from('empresas').select('*');
+  empresas = data || [];
+  render();
+}
+
+/* RENDER */
+function render(){
+
+  const busca = (buscaInput.value || "").toLowerCase();
+  const plano = planoInput.value;
+  const status = statusInput.value;
+
+  grid.innerHTML = "";
+
+  empresas
+  .filter(e =>
+    (!plano || e.plano === plano) &&
+    (!status || e.status === status) &&
+    (e.nome || "").toLowerCase().includes(busca)
+  )
+  .forEach(e => {
+
+    const vencido = e.assinatura_expira && new Date(e.assinatura_expira) < new Date();
+
+    grid.innerHTML += `
+    <div class="card" onclick="abrir('${e.id}')">
+
+      <img class="logo"
+        src="${e.logo_url || ''}"
+        onerror="this.src='https://via.placeholder.com/70'">
+
+      <b>${e.nome || '-'}</b>
+      <div>${e.plano || '-'}</div>
+
+      <div class="badge ${vencido ? 'vencido' : e.status}">
+        ${vencido ? 'Vencido' : (e.status || '-')}
+      </div>
+
+      <div style="font-size:11px;margin-top:5px;">
+        ${e.assinatura_expira ? new Date(e.assinatura_expira).toLocaleDateString() : '-'}
+      </div>
+
+    </div>
+    `;
+  });
+}
+
+/* ABRIR MODAL */
+function abrir(id){
+
+  atual = empresas.find(e => e.id === id);
+
+  if(!atual) return;
+
+  Object.keys(atual).forEach(k=>{
+    const el = document.getElementById(k);
+    if(el){
+      el.value = atual[k] ?? "";
+    }
+  });
+
+  modal.style.display = "flex";
+}
+
+/* SALVAR (PEGANDO TODOS OS CAMPOS) */
+async function salvar(){
+
+  const updateData = {};
+
+  Object.keys(atual).forEach(k=>{
+    const el = document.getElementById(k);
+    if(el){
+      updateData[k] = el.value;
+    }
+  });
+
+  await SUPABASE
+    .from('empresas')
+    .update(updateData)
+    .eq('id', atual.id);
+
+  modal.style.display = "none";
+  load();
+}
+
+/* STATUS */
+async function ativar(){
+  await SUPABASE
+    .from('empresas')
+    .update({ status: 'ativo', assinatura_ativa: true })
+    .eq('id', atual.id);
+
+  load();
+}
+
+async function bloquear(){
+  await SUPABASE
+    .from('empresas')
+    .update({ status: 'bloqueado', assinatura_ativa: false })
+    .eq('id', atual.id);
+
+  load();
+}
+
+/* FECHAR MODAL AO CLICAR FORA */
+window.onclick = function(e){
+  if(e.target === modal){
+    modal.style.display = "none";
+  }
+}
+
+/* INIT */
+load();
+
+</script>
