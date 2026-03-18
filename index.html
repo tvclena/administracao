@@ -21,6 +21,7 @@
 --primary:#2563eb;
 --success:#16a34a;
 --danger:#dc2626;
+--radius:18px;
 }
 
 body{
@@ -36,92 +37,172 @@ background:#fff;
 border-bottom:1px solid var(--border);
 font-weight:800;
 font-size:20px;
+display:flex;
+justify-content:space-between;
+align-items:center;
 }
 
-/* FILTRO */
+/* FILTROS */
 .top{
 display:flex;
 gap:10px;
 padding:20px;
+flex-wrap:wrap;
 }
 
-input{
-padding:10px;
-border-radius:10px;
+input, select{
+padding:12px;
+border-radius:12px;
 border:1px solid var(--border);
-flex:1;
 }
 
-/* GRID */
+/* GRID 6 FIXO */
 .grid{
 padding:20px;
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+grid-template-columns:repeat(6, 1fr);
 gap:20px;
+}
+
+/* RESPONSIVO */
+@media(max-width:1200px){
+.grid{grid-template-columns:repeat(3,1fr);}
+}
+@media(max-width:700px){
+.grid{grid-template-columns:repeat(2,1fr);}
 }
 
 /* CARD */
 .card{
 background:#fff;
 border:1px solid var(--border);
-border-radius:16px;
+border-radius:20px;
 padding:20px;
-box-shadow:0 10px 30px rgba(0,0,0,.05);
+cursor:pointer;
+transition:.3s;
+display:flex;
+flex-direction:column;
+align-items:center;
+text-align:center;
+height:240px;
 }
 
-.card h3{
-margin:0 0 10px;
+.card:hover{
+transform:translateY(-6px);
+box-shadow:0 20px 50px rgba(0,0,0,.08);
 }
 
+/* LOGO */
+.logo{
+width:70px;
+height:70px;
+border-radius:16px;
+object-fit:cover;
+margin-bottom:10px;
+background:#eee;
+}
+
+/* BADGE */
 .badge{
-padding:5px 10px;
+padding:4px 10px;
 border-radius:999px;
-font-size:12px;
-display:inline-block;
+font-size:11px;
+margin-top:5px;
 }
 
 .ativo{background:#dcfce7;color:#166534;}
 .bloqueado{background:#fee2e2;color:#991b1b;}
 .vencido{background:#fef3c7;color:#92400e;}
 
-.row{
-font-size:13px;
-margin:4px 0;
-color:var(--muted);
+/* MODAL */
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.4);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:100;
+}
+
+.modal-box{
+background:#fff;
+padding:30px;
+border-radius:20px;
+width:500px;
+max-width:90%;
+}
+
+.modal input{
+width:100%;
+margin-bottom:10px;
 }
 
 /* BOTÕES */
 .actions{
-margin-top:10px;
 display:flex;
-gap:8px;
+gap:10px;
+margin-top:10px;
 }
 
 .btn{
 flex:1;
-padding:8px;
+padding:10px;
 border:none;
 border-radius:10px;
 cursor:pointer;
 font-weight:600;
 }
 
+.btn-primary{background:var(--primary);color:#fff;}
 .btn-green{background:var(--success);color:#fff;}
 .btn-red{background:var(--danger);color:#fff;}
-.btn-blue{background:var(--primary);color:#fff;}
 
 </style>
 </head>
 
 <body>
 
-<div class="header">Painel de Empresas</div>
+<div class="header">
+Painel de Empresas
+</div>
 
 <div class="top">
-<input id="busca" placeholder="Buscar empresa..." oninput="render()">
+<input id="busca" placeholder="Buscar..." oninput="render()">
+<select id="filtroPlano" onchange="render()">
+<option value="">Todos planos</option>
+<option value="teste">Teste</option>
+<option value="basico">Básico</option>
+<option value="premium">Premium</option>
+<option value="enterprise">Enterprise</option>
+</select>
 </div>
 
 <div class="grid" id="grid"></div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+<div class="modal-box">
+
+<h3>Editar Empresa</h3>
+
+<input id="m_nome" placeholder="Nome">
+<input id="m_email" placeholder="Email">
+<input id="m_plano" placeholder="Plano">
+<input id="m_valor" placeholder="Valor">
+<input id="m_logo" placeholder="URL da Logo">
+
+<div class="actions">
+<button class="btn btn-primary" onclick="salvar()">Salvar</button>
+<button class="btn btn-green" onclick="ativar()">Ativar</button>
+<button class="btn btn-red" onclick="bloquear()">Bloquear</button>
+</div>
+
+</div>
+</div>
 
 <script>
 
@@ -132,62 +213,49 @@ const SUPABASE = window.supabase.createClient(
 );
 
 
-
   
 let empresas = [];
+let empresaAtual = null;
 
 /* LOAD */
 async function load(){
-
-const { data, error } = await SUPABASE
-.from('empresas')
-.select('*')
-.order('created_at', { ascending: false });
-
+const { data } = await SUPABASE.from('empresas').select('*');
 empresas = data || [];
 render();
-
 }
 
 /* RENDER */
 function render(){
 
-const termo = document.getElementById('busca').value.toLowerCase();
+const busca = document.getElementById('busca').value.toLowerCase();
+const plano = document.getElementById('filtroPlano').value;
 
 const grid = document.getElementById('grid');
-
 grid.innerHTML = "";
 
 empresas
-.filter(e => 
-e.nome.toLowerCase().includes(termo) ||
-(e.nome_fantasia || "").toLowerCase().includes(termo)
+.filter(e =>
+(!plano || e.plano === plano) &&
+(e.nome.toLowerCase().includes(busca))
 )
 .forEach(e => {
 
 const vencido = new Date(e.assinatura_expira) < new Date();
-
-const statusClass = vencido ? 'vencido' : e.status;
+const status = vencido ? 'vencido' : e.status;
 
 grid.innerHTML += `
-<div class="card">
+<div class="card" onclick="abrir('${e.id}')">
 
-<h3>${e.nome}</h3>
+<img class="logo" src="${e.logo_url || ''}" onerror="this.src='https://via.placeholder.com/70'">
 
-<span class="badge ${statusClass}">
-${vencido ? "Vencido" : e.status}
-</span>
+<b>${e.nome}</b>
 
-<div class="row">Plano: ${e.plano}</div>
-<div class="row">Email: ${e.email}</div>
-<div class="row">Cidade: ${e.cidade}</div>
-<div class="row">Expira: ${formatDate(e.assinatura_expira)}</div>
-<div class="row">Valor: R$ ${e.valor_mensal}</div>
+<div class="badge ${status}">
+${vencido ? 'Vencido' : e.status}
+</div>
 
-<div class="actions">
-<button class="btn btn-green" onclick="ativar('${e.id}')">Ativar</button>
-<button class="btn btn-red" onclick="bloquear('${e.id}')">Bloquear</button>
-<button class="btn btn-blue" onclick="editar('${e.id}')">Editar</button>
+<div style="font-size:12px;margin-top:5px;color:#64748b;">
+${e.plano}
 </div>
 
 </div>
@@ -197,29 +265,57 @@ ${vencido ? "Vencido" : e.status}
 
 }
 
-/* FORMAT DATA */
-function formatDate(d){
-if(!d) return "-";
-return new Date(d).toLocaleDateString();
+/* ABRIR MODAL */
+function abrir(id){
+
+empresaAtual = empresas.find(e => e.id === id);
+
+document.getElementById('modal').style.display = "flex";
+
+m_nome.value = empresaAtual.nome;
+m_email.value = empresaAtual.email;
+m_plano.value = empresaAtual.plano;
+m_valor.value = empresaAtual.valor_mensal;
+m_logo.value = empresaAtual.logo_url;
+
 }
 
-/* AÇÕES */
-async function ativar(id){
+/* SALVAR */
+async function salvar(){
+
 await SUPABASE.from('empresas')
-.update({ status: 'ativo', assinatura_ativa: true })
-.eq('id', id);
+.update({
+nome: m_nome.value,
+email: m_email.value,
+plano: m_plano.value,
+valor_mensal: m_valor.value,
+logo_url: m_logo.value
+})
+.eq('id', empresaAtual.id);
+
+fechar();
+load();
+
+}
+
+/* STATUS */
+async function ativar(){
+await SUPABASE.from('empresas')
+.update({ status:'ativo', assinatura_ativa:true })
+.eq('id', empresaAtual.id);
 load();
 }
 
-async function bloquear(id){
+async function bloquear(){
 await SUPABASE.from('empresas')
-.update({ status: 'bloqueado', assinatura_ativa: false })
-.eq('id', id);
+.update({ status:'bloqueado', assinatura_ativa:false })
+.eq('id', empresaAtual.id);
 load();
 }
 
-function editar(id){
-alert("editar empresa: " + id);
+/* FECHAR */
+function fechar(){
+modal.style.display = "none";
 }
 
 /* INIT */
