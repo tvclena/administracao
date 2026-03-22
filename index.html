@@ -1,433 +1,133 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
 <meta charset="UTF-8">
-<title>Painel SaaS • Empresas</title>
+<title>Criar Empresa • Mercatto Systems</title>
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
-
-<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/1828/1828817.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
-
 :root{
---bg:#f1f5f9;
---card:#ffffff;
---border:#e2e8f0;
---text:#0f172a;
---muted:#64748b;
---primary:#2563eb;
---success:#16a34a;
---danger:#dc2626;
+  --bg:#0f172a;
+  --card:#111827;
+  --border:#1f2937;
+  --text:#f9fafb;
+  --muted:#9ca3af;
+  --brand:#22c55e;
 }
 
 *{box-sizing:border-box}
 
 body{
-margin:0;
-font-family:Inter;
-background:var(--bg);
+  margin:0;
+  font-family:Inter;
+  background:linear-gradient(135deg,#020617,#0f172a);
+  color:var(--text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
 }
 
-/* HEADER */
-.header{
-padding:20px;
-background:#fff;
-border-bottom:1px solid var(--border);
-font-weight:800;
-font-size:20px;
-display:flex;
-justify-content:space-between;
-align-items:center;
+.container{
+  width:100%;
+  max-width:480px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:30px;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
 }
 
-/* TOP */
-.top{
-display:flex;
-gap:10px;
-padding:20px;
-flex-wrap:wrap;
+h1{
+  margin:0 0 20px;
+  font-size:24px;
 }
 
-input,select{
-padding:12px;
-border-radius:12px;
-border:1px solid var(--border);
+input{
+  width:100%;
+  padding:14px;
+  margin-bottom:12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:#020617;
+  color:#fff;
 }
 
-/* GRID */
-.grid{
-padding:20px;
-display:grid;
-grid-template-columns:repeat(6,1fr);
-gap:20px;
+button{
+  width:100%;
+  padding:16px;
+  border:none;
+  border-radius:12px;
+  background:var(--brand);
+  color:#000;
+  font-weight:700;
+  cursor:pointer;
 }
 
-@media(max-width:1200px){.grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}}
-
-/* CARD */
-.card{
-background:#fff;
-border:1px solid var(--border);
-border-radius:18px;
-padding:15px;
-cursor:pointer;
-transition:.3s;
-text-align:center;
-height:260px;
-display:flex;
-flex-direction:column;
-justify-content:center;
+.status{
+  margin-top:15px;
+  font-size:14px;
+  color:var(--muted);
 }
-
-.card:hover{
-transform:translateY(-6px);
-box-shadow:0 20px 40px rgba(0,0,0,.08);
-}
-
-.logo{
-width:70px;
-height:70px;
-border-radius:14px;
-object-fit:cover;
-margin:0 auto 10px;
-}
-
-.badge{
-padding:4px 10px;
-border-radius:999px;
-font-size:11px;
-margin-top:5px;
-display:inline-block;
-}
-
-.ativo{background:#dcfce7;color:#166534;}
-.bloqueado{background:#fee2e2;color:#991b1b;}
-.vencido{background:#fef3c7;color:#92400e;}
-
-/* MODAL */
-.modal{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,.5);
-display:none;
-justify-content:center;
-align-items:center;
-z-index:999;
-}
-
-.modal-box{
-background:#fff;
-padding:25px;
-border-radius:20px;
-width:1000px;
-max-height:90vh;
-overflow:auto;
-}
-
-/* FORM */
-.form-grid{
-display:grid;
-grid-template-columns:repeat(2,1fr);
-gap:10px;
-}
-
-.section-title{
-font-weight:800;
-margin:20px 0 10px;
-}
-
-/* BUTTONS */
-.actions{
-display:flex;
-gap:10px;
-margin-top:20px;
-flex-wrap:wrap;
-}
-
-.btn{
-flex:1;
-padding:12px;
-border:none;
-border-radius:10px;
-cursor:pointer;
-font-weight:700;
-}
-
-.btn-primary{background:var(--primary);color:#fff;}
-.btn-green{background:var(--success);color:#fff;}
-.btn-red{background:var(--danger);color:#fff;}
-.btn-gray{background:#e5e7eb;}
-
 </style>
 </head>
 
 <body>
 
-<div class="header">
-Painel SaaS • Empresas
-<button class="btn btn-primary" onclick="novo()">+ Nova Empresa</button>
-</div>
+<div class="container">
 
-<div class="top">
-<input id="busca" placeholder="Buscar..." oninput="render()">
-<select id="plano" onchange="render()">
-<option value="">Plano</option>
-<option>premium</option>
-<option>basico</option>
-</select>
-<select id="status" onchange="render()">
-<option value="">Status</option>
-<option>ativo</option>
-<option>bloqueado</option>
-</select>
-</div>
+<h1>🚀 Criar Empresa</h1>
 
-<div class="grid" id="grid"></div>
-
-<!-- MODAL EMPRESA -->
-<div class="modal" id="modal">
-<div class="modal-box">
-
-<h2>Empresa</h2>
-
-<div class="section-title">Dados</div>
-<div class="form-grid">
+<input id="email" placeholder="Email">
+<input id="senha" placeholder="Senha" type="password">
 <input id="nome" placeholder="Nome">
-<input id="nome_fantasia">
-<input id="cnpj">
-<input id="email">
-<input id="telefone">
-<input id="responsavel_nome">
-<input id="responsavel_cpf">
-</div>
+<input id="fantasia" placeholder="Nome Fantasia">
+<input id="cnpj" placeholder="CNPJ">
 
-<div class="section-title">Endereço</div>
-<div class="form-grid">
-<input id="cep">
-<input id="endereco">
-<input id="numero">
-<input id="bairro">
-<input id="cidade">
-<input id="estado">
-</div>
+<button onclick="criar()">Criar Empresa</button>
 
-<div class="section-title">Plano</div>
-<div class="form-grid">
-<input id="status">
-<input id="plano">
-<input id="valor_mensal">
-<input id="forma_pagamento">
-<input id="dia_vencimento">
-<input id="usuarios_limite">
-<input id="filiais_limite">
-</div>
+<div class="status" id="status"></div>
 
-<div class="section-title">Sistema</div>
-<div class="form-grid">
-<input id="supabase_url">
-<input id="supabase_anon_key">
-<input id="logo_url">
-<input id="cor_primaria">
-<input id="cor_secundaria">
-</div>
-
-<div class="section-title">Datas</div>
-<div class="form-grid">
-<input id="assinatura_inicio">
-<input id="assinatura_expira">
-</div>
-
-<div class="actions">
-<button class="btn btn-primary" onclick="salvar()">Salvar</button>
-<button class="btn btn-green" onclick="abrirCriarUsuario()">Criar Usuário</button>
-<button class="btn btn-gray" onclick="ativar()">Ativar</button>
-<button class="btn btn-red" onclick="bloquear()">Bloquear</button>
-</div>
-
-</div>
-</div>
-
-<!-- MODAL USUARIO -->
-<div class="modal" id="modalUser">
-<div class="modal-box">
-
-<h2>Criar Usuário</h2>
-
-<div class="form-grid">
-<input id="user_nome" placeholder="Nome">
-<input id="user_email" placeholder="Email">
-<input id="user_senha" placeholder="Senha">
-<select id="user_nivel">
-<option value="admin">Admin</option>
-<option value="user">Usuário</option>
-</select>
-</div>
-
-<div class="actions">
-<button class="btn btn-green" onclick="criarUsuario()">Criar</button>
-</div>
-
-</div>
 </div>
 
 <script>
 
-const SUPABASE = window.supabase.createClient(
+const supabase = window.supabase.createClient(
   "https://fcehmjmtxqmrjkuqlkay.supabase.co",
   "sb_publishable_iCDWHsq6EguNauQPP49JCg_jUNcz30o"
 );
 
-let empresas = [];
-let atual = null;
+async function criar(){
 
-/* LOAD */
-async function load(){
-const { data } = await SUPABASE.from('empresas').select('*').order('created_at',{ascending:false});
-empresas = data || [];
-render();
+  const status = document.getElementById("status")
+  status.innerText = "Criando..."
+
+  try{
+
+    const { error } = await supabase.rpc("criar_empresa_completa", {
+      p_email: document.getElementById("email").value,
+      p_senha: document.getElementById("senha").value,
+      p_nome: document.getElementById("nome").value,
+      p_nome_fantasia: document.getElementById("fantasia").value,
+      p_cnpj: document.getElementById("cnpj").value
+    })
+
+    if(error){
+      status.innerText = "Erro: " + error.message
+      return
+    }
+
+    status.innerText = "✅ Empresa criada com sucesso!"
+
+  }catch(err){
+    status.innerText = "Erro inesperado"
+  }
+
 }
-
-/* RENDER */
-function render(){
-
-const busca = buscaInput.value.toLowerCase();
-const plano = planoInput.value;
-const status = statusInput.value;
-
-grid.innerHTML="";
-
-empresas
-.filter(e =>
-(!plano || e.plano === plano) &&
-(!status || e.status === status) &&
-(e.nome?.toLowerCase().includes(busca))
-)
-.forEach(e => {
-
-const vencido = new Date(e.assinatura_expira) < new Date();
-
-grid.innerHTML += `
-<div class="card" onclick="abrir('${e.id}')">
-<img class="logo" src="${e.logo_url || ''}" onerror="this.src='https://via.placeholder.com/70'">
-
-<b>${e.nome}</b>
-<div>${e.plano}</div>
-
-<div class="badge ${vencido?'vencido':e.status}">
-${vencido?'Vencido':e.status}
-</div>
-
-<div style="font-size:11px;">
-${new Date(e.assinatura_expira).toLocaleDateString()}
-</div>
-
-</div>
-`;
-});
-}
-
-/* ABRIR */
-function abrir(id){
-atual = empresas.find(e => e.id === id);
-
-Object.keys(atual).forEach(k=>{
-if(document.getElementById(k)){
-document.getElementById(k).value = atual[k] || "";
-}
-});
-
-modal.style.display="flex";
-}
-
-/* NOVO */
-function novo(){
-atual = {};
-modal.style.display="flex";
-}
-
-/* SALVAR */
-async function salvar(){
-
-Object.keys(document.querySelectorAll(".modal input")).forEach(k=>{});
-
-const campos = document.querySelectorAll(".modal input");
-
-campos.forEach(i=>{
-atual[i.id] = i.value;
-});
-
-if(atual.id){
-await SUPABASE.from('empresas').update(atual).eq('id', atual.id);
-}else{
-await SUPABASE.from('empresas').insert(atual);
-}
-
-modal.style.display="none";
-load();
-}
-
-/* STATUS */
-async function ativar(){
-await SUPABASE.from('empresas').update({status:'ativo'}).eq('id', atual.id);
-load();
-}
-
-async function bloquear(){
-await SUPABASE.from('empresas').update({status:'bloqueado'}).eq('id', atual.id);
-load();
-}
-
-/* USUARIO */
-function abrirCriarUsuario(){
-modalUser.style.display="flex";
-}
-
-async function criarUsuario(){
-
-const payload = {
-nome:user_nome.value,
-email:user_email.value,
-senha:user_senha.value,
-nivel:user_nivel.value,
-empresa_id:atual.id
-};
-
-let res = await fetch("/api/createUser",{
-method:"POST",
-headers:{ "Content-Type":"application/json" },
-body:JSON.stringify(payload)
-});
-
-let data;
-
-try{
-data = await res.json();
-}catch{
-const text = await res.text();
-alert(text);
-return;
-}
-
-if(data.error){
-alert(data.error);
-return;
-}
-
-alert("Usuário criado");
-modalUser.style.display="none";
-}
-
-/* INIT */
-load();
 
 </script>
 
