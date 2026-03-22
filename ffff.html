@@ -1,138 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+
+<meta charset="UTF-8">
+<title>Admin • Empresas</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<style>
+
+:root{
+--bg:#f8fafc;
+--card:#ffffff;
+--border:#e2e8f0;
+--text:#0f172a;
+--muted:#64748b;
+--primary:#2563eb;
+--success:#16a34a;
+--danger:#dc2626;
+}
+
+body{margin:0;font-family:Inter;background:var(--bg);}
+
+/* HEADER */
+.header{
+padding:20px;
+background:#fff;
+border-bottom:1px solid var(--border);
+font-weight:800;
+font-size:20px;
+}
+
+/* FILTROS */
+.top{
+display:flex;
+gap:10px;
+padding:20px;
+flex-wrap:wrap;
+}
+
+input,select{
+padding:12px;
+border-radius:12px;
+border:1px solid var(--border);
+}
+
+/* GRID FIXO */
+.grid{
+padding:20px;
+display:grid;
+grid-template-columns:repeat(6,1fr);
+gap:20px;
+}
+
+@media(max-width:1200px){.grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:700px){.grid{grid-template-columns:repeat(2,1fr)}}
+
+/* CARD */
+.card{
+background:#fff;
+border:1px solid var(--border);
+border-radius:18px;
+padding:15px;
+cursor:pointer;
+transition:.3s;
+text-align:center;
+height:240px;
+display:flex;
+flex-direction:column;
+justify-content:center;
+}
+
+.card:hover{
+transform:translateY(-6px);
+box-shadow:0 20px 40px rgba(0,0,0,.08);
+}
+
+.logo{
+width:70px;
+height:70px;
+border-radius:14px;
+object-fit:cover;
+margin:0 auto 10px;
+}
+
+.badge{
+padding:4px 10px;
+border-radius:999px;
+font-size:11px;
+display:inline-block;
+margin-top:5px;
+}
+
+.ativo{background:#dcfce7;color:#166534;}
+.bloqueado{background:#fee2e2;color:#991b1b;}
+.vencido{background:#fef3c7;color:#92400e;}
+
+/* MODAL */
+.modal{
+position:fixed;
+top:0;
+left:0;
+width:100%;
+height:100%;
+background:rgba(0,0,0,.4);
+display:none;
+justify-content:center;
+align-items:center;
+z-index:999;
+}
+
+.modal-box{
+background:#fff;
+padding:30px;
+border-radius:20px;
+width:900px;
+max-height:90vh;
+overflow:auto;
+}
+
+/* GRID FORM */
+.form-grid{
+display:grid;
+grid-template-columns:repeat(2,1fr);
+gap:10px;
+}
+
+.form-grid input{
+width:100%;
+}
+
+/* TITULOS */
+.section-title{
+font-weight:800;
+margin:20px 0 10px;
+}
+
+/* BOTÕES */
+.actions{
+display:flex;
+gap:10px;
+margin-top:20px;
+}
+
+.btn{
+flex:1;
+padding:12px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+font-weight:700;
+}
+
+.btn-primary{background:var(--primary);color:#fff;}
+.btn-green{background:var(--success);color:#fff;}
+.btn-red{background:var(--danger);color:#fff;}
+
+</style>
+</head>
+
+<body>
+
+<div class="header">Painel Completo de Empresas</div>
+
+<div class="top">
+<input id="busca" placeholder="Buscar..." oninput="render()">
+<select id="plano" onchange="render()">
+<option value="">Plano</option>
+<option>teste</option>
+<option>basico</option>
+<option>premium</option>
+<option>enterprise</option>
+</select>
+<select id="status" onchange="render()">
+<option value="">Status</option>
+<option>ativo</option>
+<option>bloqueado</option>
+</select>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+<div class="modal-box">
+
+<h2>Empresa</h2>
+
+<div class="section-title">Dados Gerais</div>
+<div class="form-grid">
+<input id="nome">
+<input id="nome_fantasia">
+<input id="cnpj">
+<input id="email">
+<input id="telefone">
+<input id="responsavel_nome">
+<input id="responsavel_cpf">
+</div>
+
+<div class="section-title">Endereço</div>
+<div class="form-grid">
+<input id="cep">
+<input id="endereco">
+<input id="numero">
+<input id="bairro">
+<input id="cidade">
+<input id="estado">
+</div>
+
+<div class="section-title">Plano</div>
+<div class="form-grid">
+<input id="status">
+<input id="plano">
+<input id="valor_mensal">
+<input id="forma_pagamento">
+<input id="dia_vencimento">
+<input id="usuarios_limite">
+<input id="filiais_limite">
+</div>
+
+<div class="section-title">Sistema</div>
+<div class="form-grid">
+<input id="supabase_url">
+<input id="supabase_anon_key">
+<input id="logo_url">
+<input id="cor_primaria">
+<input id="cor_secundaria">
+</div>
+
+<div class="section-title">Datas</div>
+<div class="form-grid">
+<input id="assinatura_inicio">
+<input id="assinatura_expira">
+<input id="ultimo_login">
+<input id="total_logins">
+</div>
+
+<div class="actions">
+<button class="btn btn-primary" onclick="salvar()">Salvar</button>
+<button class="btn btn-green" onclick="ativar()">Ativar</button>
+<button class="btn btn-red" onclick="bloquear()">Bloquear</button>
+</div>
+
+</div>
+</div>
+
 <script>
 
-/* CONFIG (IMPORTANTE: USE SUA ANON KEY JWT) */
+
 /* CONFIG */
 const SUPABASE = window.supabase.createClient(
   "https://fcehmjmtxqmrjkuqlkay.supabase.co",
   "sb_publishable_iCDWHsq6EguNauQPP49JCg_jUNcz30o"
 );
-;
 
-/* ELEMENTOS */
-const buscaInput = document.getElementById('busca');
-const planoInput = document.getElementById('plano');
-const statusInput = document.getElementById('status');
-const grid = document.getElementById('grid');
-const modal = document.getElementById('modal');
 
-/* ESTADO */
-let empresas = [];
-let atual = null;
+let empresas=[];
+let atual=null;
 
-/* LOAD */
 async function load(){
-  const { data } = await SUPABASE.from('empresas').select('*');
-  empresas = data || [];
-  render();
+const {data}=await SUPABASE.from('empresas').select('*');
+empresas=data||[];
+render();
 }
 
-/* RENDER */
 function render(){
 
-  const busca = (buscaInput.value || "").toLowerCase();
-  const plano = planoInput.value;
-  const status = statusInput.value;
+const busca=buscaInput.value.toLowerCase();
+const plano=planoInput.value;
+const status=statusInput.value;
 
-  grid.innerHTML = "";
+grid.innerHTML="";
 
-  empresas
-  .filter(e =>
-    (!plano || e.plano === plano) &&
-    (!status || e.status === status) &&
-    (e.nome || "").toLowerCase().includes(busca)
-  )
-  .forEach(e => {
+empresas
+.filter(e=>
+(!plano||e.plano===plano)&&
+(!status||e.status===status)&&
+(e.nome.toLowerCase().includes(busca))
+)
+.forEach(e=>{
 
-    const vencido = e.assinatura_expira && new Date(e.assinatura_expira) < new Date();
+const vencido=new Date(e.assinatura_expira)<new Date();
 
-    grid.innerHTML += `
-    <div class="card" onclick="abrir('${e.id}')">
+grid.innerHTML+=`
+<div class="card" onclick="abrir('${e.id}')">
 
-      <img class="logo"
-        src="${e.logo_url || ''}"
-        onerror="this.src='https://via.placeholder.com/70'">
+<img class="logo" src="${e.logo_url||''}" onerror="this.src='https://via.placeholder.com/70'">
 
-      <b>${e.nome || '-'}</b>
-      <div>${e.plano || '-'}</div>
+<b>${e.nome}</b>
+<div>${e.plano}</div>
 
-      <div class="badge ${vencido ? 'vencido' : e.status}">
-        ${vencido ? 'Vencido' : (e.status || '-')}
-      </div>
+<div class="badge ${vencido?'vencido':e.status}">
+${vencido?'Vencido':e.status}
+</div>
 
-      <div style="font-size:11px;margin-top:5px;">
-        ${e.assinatura_expira ? new Date(e.assinatura_expira).toLocaleDateString() : '-'}
-      </div>
+<div style="font-size:11px;margin-top:5px;">
+${new Date(e.assinatura_expira).toLocaleDateString()}
+</div>
 
-    </div>
-    `;
-  });
+</div>
+`;
+
+});
+
 }
 
-/* ABRIR MODAL */
 function abrir(id){
 
-  atual = empresas.find(e => e.id === id);
+atual=empresas.find(e=>e.id===id);
 
-  if(!atual) return;
+Object.keys(atual).forEach(k=>{
+if(document.getElementById(k)){
+document.getElementById(k).value=atual[k]||"";
+}
+});
 
-  Object.keys(atual).forEach(k=>{
-    const el = document.getElementById(k);
-    if(el){
-      el.value = atual[k] ?? "";
-    }
-  });
+modal.style.display="flex";
 
-  modal.style.display = "flex";
 }
 
-/* SALVAR (PEGANDO TODOS OS CAMPOS) */
 async function salvar(){
 
-  const updateData = {};
+await SUPABASE.from('empresas')
+.update(atual)
+.eq('id',atual.id);
 
-  Object.keys(atual).forEach(k=>{
-    const el = document.getElementById(k);
-    if(el){
-      updateData[k] = el.value;
-    }
-  });
+modal.style.display="none";
+load();
 
-  await SUPABASE
-    .from('empresas')
-    .update(updateData)
-    .eq('id', atual.id);
-
-  modal.style.display = "none";
-  load();
 }
 
-/* STATUS */
 async function ativar(){
-  await SUPABASE
-    .from('empresas')
-    .update({ status: 'ativo', assinatura_ativa: true })
-    .eq('id', atual.id);
-
-  load();
+await SUPABASE.from('empresas')
+.update({status:'ativo'})
+.eq('id',atual.id);
+load();
 }
 
 async function bloquear(){
-  await SUPABASE
-    .from('empresas')
-    .update({ status: 'bloqueado', assinatura_ativa: false })
-    .eq('id', atual.id);
-
-  load();
+await SUPABASE.from('empresas')
+.update({status:'bloqueado'})
+.eq('id',atual.id);
+load();
 }
 
-/* FECHAR MODAL AO CLICAR FORA */
-window.onclick = function(e){
-  if(e.target === modal){
-    modal.style.display = "none";
-  }
-}
-
-/* INIT */
 load();
 
 </script>
+
+</body>
+</html>
