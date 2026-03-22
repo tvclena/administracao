@@ -2,20 +2,20 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<title>Criar Empresa • Mercatto Systems</title>
+<title>Mercatto Systems • Cadastro</title>
 
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <style>
 :root{
-  --bg:#0f172a;
-  --card:#111827;
-  --border:#1f2937;
-  --text:#f9fafb;
-  --muted:#9ca3af;
+  --bg:#020617;
+  --card:#0f172a;
+  --border:#1e293b;
+  --text:#f1f5f9;
+  --muted:#94a3b8;
   --brand:#22c55e;
 }
 
@@ -24,27 +24,34 @@
 body{
   margin:0;
   font-family:Inter;
-  background:linear-gradient(135deg,#020617,#0f172a);
+  background:linear-gradient(135deg,#020617,#020617);
   color:var(--text);
   display:flex;
   align-items:center;
   justify-content:center;
-  height:100vh;
+  min-height:100vh;
 }
 
 .container{
   width:100%;
-  max-width:480px;
+  max-width:520px;
   background:var(--card);
   border:1px solid var(--border);
-  border-radius:20px;
+  border-radius:22px;
   padding:30px;
-  box-shadow:0 20px 60px rgba(0,0,0,.5);
+  box-shadow:0 25px 80px rgba(0,0,0,.6);
 }
 
 h1{
   margin:0 0 20px;
-  font-size:24px;
+  font-size:26px;
+  font-weight:900;
+}
+
+.sub{
+  font-size:14px;
+  color:var(--muted);
+  margin-bottom:20px;
 }
 
 input{
@@ -55,24 +62,61 @@ input{
   border:1px solid var(--border);
   background:#020617;
   color:#fff;
+  font-size:14px;
+}
+
+input:focus{
+  outline:none;
+  border-color:var(--brand);
 }
 
 button{
   width:100%;
   padding:16px;
   border:none;
-  border-radius:12px;
+  border-radius:14px;
   background:var(--brand);
-  color:#000;
-  font-weight:700;
+  font-weight:800;
+  font-size:15px;
   cursor:pointer;
+}
+
+button:active{
+  transform:scale(.98);
 }
 
 .status{
   margin-top:15px;
   font-size:14px;
+  text-align:center;
   color:var(--muted);
 }
+
+/* LOADING */
+.loading{
+  display:none;
+  margin-top:15px;
+  text-align:center;
+}
+
+.loading span{
+  display:inline-block;
+  width:10px;
+  height:10px;
+  background:#22c55e;
+  border-radius:50%;
+  margin:0 3px;
+  animation:blink 1s infinite;
+}
+
+.loading span:nth-child(2){animation-delay:.2s}
+.loading span:nth-child(3){animation-delay:.4s}
+
+@keyframes blink{
+  0%,80%,100%{opacity:0}
+  40%{opacity:1}
+}
+
 </style>
 </head>
 
@@ -80,15 +124,21 @@ button{
 
 <div class="container">
 
-<h1>🚀 Criar Empresa</h1>
+<h1>🚀 Criar Conta</h1>
+<div class="sub">Sistema Mercatto • Cadastro rápido</div>
 
+<input id="nome" placeholder="Nome do responsável">
 <input id="email" placeholder="Email">
 <input id="senha" placeholder="Senha" type="password">
-<input id="nome" placeholder="Nome">
-<input id="fantasia" placeholder="Nome Fantasia">
+<input id="empresa" placeholder="Nome da empresa">
 <input id="cnpj" placeholder="CNPJ">
+<input id="telefone" placeholder="Telefone">
 
-<button onclick="criar()">Criar Empresa</button>
+<button onclick="criar()">Criar Conta</button>
+
+<div class="loading" id="loading">
+  <span></span><span></span><span></span>
+</div>
 
 <div class="status" id="status"></div>
 
@@ -96,34 +146,72 @@ button{
 
 <script>
 
+// 🔥 CONFIGURE AQUI
 const supabase = window.supabase.createClient(
   "https://fcehmjmtxqmrjkuqlkay.supabase.co",
   "sb_publishable_iCDWHsq6EguNauQPP49JCg_jUNcz30o"
-);
+)
 
+// =============================
+// MÁSCARAS
+// =============================
+document.getElementById("cnpj").addEventListener("input", e=>{
+  let v = e.target.value.replace(/\D/g,'').slice(0,14)
+  v = v.replace(/^(\d{2})(\d)/,'$1.$2')
+  v = v.replace(/^(\d{2})\.(\d{3})(\d)/,'$1.$2.$3')
+  v = v.replace(/\.(\d{3})(\d)/,'.$1/$2')
+  v = v.replace(/(\d{4})(\d)/,'$1-$2')
+  e.target.value = v
+})
+
+document.getElementById("telefone").addEventListener("input", e=>{
+  let v = e.target.value.replace(/\D/g,'').slice(0,11)
+  v = v.replace(/^(\d{2})(\d)/,'($1) $2')
+  v = v.replace(/(\d{5})(\d)/,'$1-$2')
+  e.target.value = v
+})
+
+// =============================
+// CRIAR
+// =============================
 async function criar(){
 
   const status = document.getElementById("status")
-  status.innerText = "Criando..."
+  const loading = document.getElementById("loading")
+
+  const nome = document.getElementById("nome").value
+  const email = document.getElementById("email").value
+  const senha = document.getElementById("senha").value
+  const empresa = document.getElementById("empresa").value
+
+  if(!nome || !email || !senha || !empresa){
+    status.innerText = "Preencha todos os campos obrigatórios"
+    return
+  }
+
+  status.innerText = ""
+  loading.style.display = "block"
 
   try{
 
-    const { error } = await supabase.rpc("criar_empresa_completa", {
-      p_email: document.getElementById("email").value,
-      p_senha: document.getElementById("senha").value,
-      p_nome: document.getElementById("nome").value,
-      p_nome_fantasia: document.getElementById("fantasia").value,
-      p_cnpj: document.getElementById("cnpj").value
+    const { data, error } = await supabase.rpc("criar_usuario_com_empresa", {
+      p_email: email,
+      p_senha: senha,
+      p_nome: nome,
+      p_empresa_nome: empresa
     })
+
+    loading.style.display = "none"
 
     if(error){
       status.innerText = "Erro: " + error.message
       return
     }
 
-    status.innerText = "✅ Empresa criada com sucesso!"
+    status.innerText = "✅ Conta criada com sucesso!"
 
   }catch(err){
+    loading.style.display = "none"
     status.innerText = "Erro inesperado"
   }
 
