@@ -3,9 +3,11 @@
 <head>
 
 <meta charset="UTF-8">
-<title>Admin • Empresas</title>
+<title>Painel SaaS • Empresas</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link rel="icon" href="https://cdn-icons-png.flaticon.com/512/1828/1828817.png">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -13,7 +15,7 @@
 <style>
 
 :root{
---bg:#f8fafc;
+--bg:#f1f5f9;
 --card:#ffffff;
 --border:#e2e8f0;
 --text:#0f172a;
@@ -38,9 +40,12 @@ background:#fff;
 border-bottom:1px solid var(--border);
 font-weight:800;
 font-size:20px;
+display:flex;
+justify-content:space-between;
+align-items:center;
 }
 
-/* FILTROS */
+/* TOP */
 .top{
 display:flex;
 gap:10px;
@@ -74,7 +79,7 @@ padding:15px;
 cursor:pointer;
 transition:.3s;
 text-align:center;
-height:240px;
+height:260px;
 display:flex;
 flex-direction:column;
 justify-content:center;
@@ -97,8 +102,8 @@ margin:0 auto 10px;
 padding:4px 10px;
 border-radius:999px;
 font-size:11px;
-display:inline-block;
 margin-top:5px;
+display:inline-block;
 }
 
 .ativo{background:#dcfce7;color:#166534;}
@@ -112,7 +117,7 @@ top:0;
 left:0;
 width:100%;
 height:100%;
-background:rgba(0,0,0,.4);
+background:rgba(0,0,0,.5);
 display:none;
 justify-content:center;
 align-items:center;
@@ -121,14 +126,14 @@ z-index:999;
 
 .modal-box{
 background:#fff;
-padding:30px;
+padding:25px;
 border-radius:20px;
-width:900px;
+width:1000px;
 max-height:90vh;
 overflow:auto;
 }
 
-/* GRID FORM */
+/* FORM */
 .form-grid{
 display:grid;
 grid-template-columns:repeat(2,1fr);
@@ -140,10 +145,12 @@ font-weight:800;
 margin:20px 0 10px;
 }
 
+/* BUTTONS */
 .actions{
 display:flex;
 gap:10px;
 margin-top:20px;
+flex-wrap:wrap;
 }
 
 .btn{
@@ -158,13 +165,17 @@ font-weight:700;
 .btn-primary{background:var(--primary);color:#fff;}
 .btn-green{background:var(--success);color:#fff;}
 .btn-red{background:var(--danger);color:#fff;}
+.btn-gray{background:#e5e7eb;}
 
 </style>
 </head>
 
 <body>
 
-<div class="header">Painel de Empresas</div>
+<div class="header">
+Painel SaaS • Empresas
+<button class="btn btn-primary" onclick="novo()">+ Nova Empresa</button>
+</div>
 
 <div class="top">
 <input id="busca" placeholder="Buscar..." oninput="render()">
@@ -188,18 +199,57 @@ font-weight:700;
 
 <h2>Empresa</h2>
 
+<div class="section-title">Dados</div>
 <div class="form-grid">
-<input id="nome">
+<input id="nome" placeholder="Nome">
 <input id="nome_fantasia">
 <input id="cnpj">
 <input id="email">
 <input id="telefone">
 <input id="responsavel_nome">
+<input id="responsavel_cpf">
+</div>
+
+<div class="section-title">Endereço</div>
+<div class="form-grid">
+<input id="cep">
+<input id="endereco">
+<input id="numero">
+<input id="bairro">
+<input id="cidade">
+<input id="estado">
+</div>
+
+<div class="section-title">Plano</div>
+<div class="form-grid">
+<input id="status">
+<input id="plano">
+<input id="valor_mensal">
+<input id="forma_pagamento">
+<input id="dia_vencimento">
+<input id="usuarios_limite">
+<input id="filiais_limite">
+</div>
+
+<div class="section-title">Sistema</div>
+<div class="form-grid">
+<input id="supabase_url">
+<input id="supabase_anon_key">
+<input id="logo_url">
+<input id="cor_primaria">
+<input id="cor_secundaria">
+</div>
+
+<div class="section-title">Datas</div>
+<div class="form-grid">
+<input id="assinatura_inicio">
+<input id="assinatura_expira">
 </div>
 
 <div class="actions">
 <button class="btn btn-primary" onclick="salvar()">Salvar</button>
 <button class="btn btn-green" onclick="abrirCriarUsuario()">Criar Usuário</button>
+<button class="btn btn-gray" onclick="ativar()">Ativar</button>
 <button class="btn btn-red" onclick="bloquear()">Bloquear</button>
 </div>
 
@@ -239,25 +289,27 @@ const SUPABASE = window.supabase.createClient(
 let empresas = [];
 let atual = null;
 
+/* LOAD */
 async function load(){
-const { data } = await SUPABASE.from('empresas').select('*');
+const { data } = await SUPABASE.from('empresas').select('*').order('created_at',{ascending:false});
 empresas = data || [];
 render();
 }
 
+/* RENDER */
 function render(){
 
-const busca = document.getElementById("busca").value.toLowerCase();
-const plano = document.getElementById("plano").value;
-const status = document.getElementById("status").value;
+const busca = buscaInput.value.toLowerCase();
+const plano = planoInput.value;
+const status = statusInput.value;
 
-grid.innerHTML = "";
+grid.innerHTML="";
 
 empresas
 .filter(e =>
 (!plano || e.plano === plano) &&
 (!status || e.status === status) &&
-(e.nome.toLowerCase().includes(busca))
+(e.nome?.toLowerCase().includes(busca))
 )
 .forEach(e => {
 
@@ -265,7 +317,8 @@ const vencido = new Date(e.assinatura_expira) < new Date();
 
 grid.innerHTML += `
 <div class="card" onclick="abrir('${e.id}')">
-<img class="logo" src="${e.logo_url}">
+<img class="logo" src="${e.logo_url || ''}" onerror="this.src='https://via.placeholder.com/70'">
+
 <b>${e.nome}</b>
 <div>${e.plano}</div>
 
@@ -273,16 +326,16 @@ grid.innerHTML += `
 ${vencido?'Vencido':e.status}
 </div>
 
-<div style="font-size:11px;margin-top:5px;">
+<div style="font-size:11px;">
 ${new Date(e.assinatura_expira).toLocaleDateString()}
 </div>
 
 </div>
 `;
-
 });
 }
 
+/* ABRIR */
 function abrir(id){
 atual = empresas.find(e => e.id === id);
 
@@ -292,61 +345,77 @@ document.getElementById(k).value = atual[k] || "";
 }
 });
 
-modal.style.display = "flex";
+modal.style.display="flex";
 }
 
+/* NOVO */
+function novo(){
+atual = {};
+modal.style.display="flex";
+}
+
+/* SALVAR */
 async function salvar(){
 
-Object.keys(atual).forEach(k=>{
-if(document.getElementById(k)){
-atual[k] = document.getElementById(k).value;
-}
+Object.keys(document.querySelectorAll(".modal input")).forEach(k=>{});
+
+const campos = document.querySelectorAll(".modal input");
+
+campos.forEach(i=>{
+atual[i.id] = i.value;
 });
 
-await SUPABASE.from('empresas')
-.update(atual)
-.eq('id', atual.id);
+if(atual.id){
+await SUPABASE.from('empresas').update(atual).eq('id', atual.id);
+}else{
+await SUPABASE.from('empresas').insert(atual);
+}
 
-modal.style.display = "none";
+modal.style.display="none";
+load();
+}
+
+/* STATUS */
+async function ativar(){
+await SUPABASE.from('empresas').update({status:'ativo'}).eq('id', atual.id);
 load();
 }
 
 async function bloquear(){
-await SUPABASE.from('empresas')
-.update({status:'bloqueado'})
-.eq('id', atual.id);
+await SUPABASE.from('empresas').update({status:'bloqueado'}).eq('id', atual.id);
 load();
 }
 
+/* USUARIO */
 function abrirCriarUsuario(){
-modalUser.style.display = "flex";
+modalUser.style.display="flex";
 }
 
 async function criarUsuario(){
 
-const nome = user_nome.value;
-const email = user_email.value;
-const senha = user_senha.value;
-const nivel = user_nivel.value;
+const payload = {
+nome:user_nome.value,
+email:user_email.value,
+senha:user_senha.value,
+nivel:user_nivel.value,
+empresa_id:atual.id
+};
 
-if(!email || !senha){
-alert("Preencha tudo");
-return;
-}
-
-const res = await fetch("/api/createUser", {
+let res = await fetch("/api/createUser",{
 method:"POST",
 headers:{ "Content-Type":"application/json" },
-body: JSON.stringify({
-email,
-senha,
-nome,
-nivel,
-empresa_id: atual.id
-})
+body:JSON.stringify(payload)
 });
 
-const data = await res.json();
+let data;
+
+try{
+data = await res.json();
+}catch{
+const text = await res.text();
+alert(text);
+return;
+}
 
 if(data.error){
 alert(data.error);
@@ -357,6 +426,7 @@ alert("Usuário criado");
 modalUser.style.display="none";
 }
 
+/* INIT */
 load();
 
 </script>
