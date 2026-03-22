@@ -11,7 +11,7 @@ const supabaseAdmin = createClient(
 
 export default async function handler(req, res){
 
-  /* ===== CORS (IMPORTANTE PRA FRONT FUNCIONAR) ===== */
+  /* ===== CORS ===== */
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -26,14 +26,30 @@ export default async function handler(req, res){
 
   try {
 
-    const { email, senha, nome, nivel, empresa_id } = req.body;
+    console.log("REQUEST BODY:", req.body);
 
-    /* ===== VALIDAÇÕES ===== */
+    const body = typeof req.body === "string"
+      ? JSON.parse(req.body)
+      : req.body;
+
+    const {
+      email,
+      senha,
+      nome,
+      nivel = "user",
+      empresa_id
+    } = body;
+
+    /* ================= VALIDAÇÃO ================= */
+
     if (!email || !senha || !empresa_id) {
-      return res.status(400).json({ error: "Dados obrigatórios faltando" });
+      return res.status(400).json({
+        error: "Email, senha e empresa são obrigatórios"
+      });
     }
 
-    /* ===== VERIFICA EMPRESA ===== */
+    /* ================= BUSCAR EMPRESA ================= */
+
     const { data: empresa, error: empresaError } = await supabaseAdmin
       .from("empresas")
       .select("*")
@@ -41,21 +57,62 @@ export default async function handler(req, res){
       .single();
 
     if (empresaError || !empresa) {
-      return res.status(400).json({ error: "Empresa não encontrada" });
+      return res.status(400).json({
+        error: "Empresa não encontrada"
+      });
     }
 
-    /* ===== VERIFICA SE JÁ EXISTE USUÁRIO ===== */
+    /* ================= VERIFICAR STATUS ================= */
+
+    if (empresa.status !== "ativo") {
+      return res.status(403).json({
+        error: "Empresa bloqueada"
+      });
+    }
+
+    /* ================= VERIFICAR ASSINATURA ================= */
+
+    if (empresa.assinatura_expira) {
+      const expira = new Date(empresa.assinatura_expira);
+      const agora = new Date();
+
+      if (expira < agora) {
+        return res.status(403).json({
+          error: "Assinatura vencida"
+        });
+      }
+    }
+
+    /* ================= LIMITE DE USUÁRIOS ================= */
+
+    const { count } = await supabaseAdmin
+      .from("usuarios_empresa")
+      .select("*", { count: "exact", head: true })
+      .eq("empresa_id", empresa_id);
+
+    if (count >= empresa.usuarios_limite) {
+      return res.status(403).json({
+        error: "Limite de usuários atingido"
+      });
+    }
+
+    /* ================= DUPLICIDADE ================= */
+
     const { data: existente } = await supabaseAdmin
       .from("usuarios_empresa")
       .select("*")
       .eq("email", email)
+      .eq("empresa_id", empresa_id)
       .maybeSingle();
 
     if (existente) {
-      return res.status(400).json({ error: "Usuário já existe nessa empresa" });
+      return res.status(400).json({
+        error: "Usuário já existe nesta empresa"
+      });
     }
 
-    /* ===== CRIA USUÁRIO NO AUTH ===== */
+    /* ================= CRIAR AUTH ================= */
+
     const { data: userData, error: authError } =
       await supabaseAdmin.auth.admin.createUser({
         email,
@@ -69,12 +126,16 @@ export default async function handler(req, res){
       });
 
     if (authError) {
-      return res.status(400).json({ error: authError.message });
+      console.error("AUTH ERROR:", authError);
+      return res.status(400).json({
+        error: authError.message
+      });
     }
 
     const user_id = userData.user.id;
 
-    /* ===== SALVA RELAÇÃO COM EMPRESA ===== */
+    /* ================= INSERIR RELAÇÃO ================= */
+
     const { error: insertError } = await supabaseAdmin
       .from("usuarios_empresa")
       .insert({
@@ -86,32 +147,37 @@ export default async function handler(req, res){
       });
 
     if (insertError) {
-      return res.status(400).json({ error: insertError.message });
+      console.error("INSERT ERROR:", insertError);
+      return res.status(400).json({
+        error: insertError.message
+      });
     }
 
-    /* ===== ATUALIZA CONTADOR DE USUÁRIOS ===== */
+    /* ================= ATUALIZA MÉTRICAS ================= */
+
     await supabaseAdmin
       .from("empresas")
       .update({
-        total_logins: (empresa.total_logins || 0) + 1
+        total_logins: (empresa.total_logins || 0) + 1,
+        ultimo_login: new Date()
       })
       .eq("id", empresa_id);
 
-    /* ===== RESPOSTA FINAL ===== */
+    /* ================= SUCESSO ================= */
+
     return res.status(200).json({
       ok: true,
+      message: "Usuário criado com sucesso",
       user_id,
-      empresa: empresa.nome,
-      mensagem: "Usuário criado com sucesso"
+      empresa: empresa.nome
     });
 
   } catch (err) {
 
-    console.error("ERRO API:", err);
+    console.error("ERRO GERAL:", err);
 
     return res.status(500).json({
-      error: "Erro interno",
-      detalhe: err.message
+      error: err.message || "Erro interno no servidor"
     });
   }
 }
